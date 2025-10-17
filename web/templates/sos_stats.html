@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+{% block title %}{{title}}{% endblock title %}
+
+{% block content %}
+<!-- Подключение Three.js, Chart.js и Leaflet (OpenStreetMap) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    /* Кастомные стили для страницы статистики SOS */
+    .stats-header {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stats-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .period-selector {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .period-btn {
+        margin: 0 5px;
+        border-radius: 25px;
+        padding: 8px 20px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .period-btn.active {
+        background-color: #ff6b6b;
+        color: white;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card h3 {
+        color: #333;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+    }
+    
+    .big-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #ff6b6b;
+        text-align: center;
+        margin: 1rem 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .container-3d {
+        height: 300px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        position: relative;
+    }
+    
+    .chart-container {
+        height: 250px;
+        position: relative;
+    }
+    
+    .category-stats {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1rem;
+    }
+    
+    .category-item {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 10px;
+        background: rgba(255, 107, 107, 0.1);
+        margin: 0 5px;
+        flex: 1;
+    }
+    
+    .category-item h4 {
+        margin: 0;
+        color: #ff6b6b;
+        font-size: 1rem;
+    }
+    
+    .category-item p {
+        margin: 5px 0 0 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+    }
+    
+    .floating-elements {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+    
+    .floating-circle {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 107, 107, 0.1);
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    
+    .loading {
+        text-align: center;
+        color: #666;
+        font-size: 1rem;
+        margin: 50px 0;
+    }
+    
+    /* Стили для OpenStreetMap всплывающих окон */
+    .custom-popup .leaflet-popup-content-wrapper {
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .custom-popup .leaflet-popup-content {
+        margin: 0;
+        padding: 0;
+    }
+    
+    .custom-popup .leaflet-popup-tip {
+        background: white;
+        border: none;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+</style>
+
+<!-- Плавающие элементы для фона -->
+<div class="floating-elements">
+    <div class="floating-circle" style="width: 80px; height: 80px; top: 10%; left: 10%; animation-delay: 0s;"></div>
+    <div class="floating-circle" style="width: 120px; height: 120px; top: 20%; right: 10%; animation-delay: 2s;"></div>
+    <div class="floating-circle" style="width: 60px; height: 60px; bottom: 20%; left: 20%; animation-delay: 4s;"></div>
+    <div class="floating-circle" style="width: 100px; height: 100px; bottom: 10%; right: 20%; animation-delay: 1s;"></div>
+</div>
+
+<div class="stats-header">
+    <h1>🚨 Статистика SOS</h1>
+    <p class="mb-0">{{ title }}</p>
+</div>
+
+<!-- Селектор периода -->
+<div class="period-selector">
+    <a href="{% url 'web:sos_stats' 'day' %}" class="btn btn-outline-danger period-btn {% if 'SOS отчёт за день' in title %}active{% endif %}">День</a>
+    <a href="{% url 'web:sos_stats' 'week' %}" class="btn btn-outline-danger period-btn {% if 'SOS отчёт за неделю' in title %}active{% endif %}">Неделя</a>
+    <a href="{% url 'web:sos_stats' 'month' %}" class="btn btn-outline-danger period-btn {% if 'SOS отчёт за месяц' in title %}active{% endif %}">Месяц</a>
+    <a href="{% url 'web:sos_stats' 'year' %}" class="btn btn-outline-danger period-btn {% if 'SOS отчёт за год' in title %}active{% endif %}">Год</a>
+    <a href="{% url 'web:sos_stats' 'all' %}" class="btn btn-outline-danger period-btn {% if 'Все SOS сообщения' in title %}active{% endif %}">Все время</a>
+</div>
+
+<div class="row">
+    <!-- Общая статистика -->
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <h3>🚨 Всего SOS</h3>
+            <div class="big-number">{{ total_sos|default:0 }}</div>
+            <p class="text-center text-muted">за период</p>
+        </div>
+    </div>
+    
+    <!-- Среднее время обработки -->
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <h3>⏱️ Среднее время</h3>
+            <div class="big-number">{{ avg_response_time|default:0 }}</div>
+            <p class="text-center text-muted">минут</p>
+        </div>
+    </div>
+    
+    <!-- Процент обработанных -->
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <h3>✅ Обработано</h3>
+            <div class="big-number">{{ response_percent|default:0 }}</div>
+            <p class="text-center text-muted">%</p>
+        </div>
+    </div>
+    
+    <!-- В обработке -->
+    <div class="col-lg-3 col-md-6">
+        <div class="stat-card">
+            <h3>⏳ В ожидании</h3>
+            <div class="big-number">{{ active_sos|default:0 }}</div>
+            <p class="text-center text-muted">сообщений</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Статистика по регионам -->
+    <div class="col-lg-4 col-md-6">
+        <div class="stat-card">
+            <h3>🇰🇿 Казахстан</h3>
+            <div class="big-number">{{ kazakhstan_sos_count|default:0 }}</div>
+            <p class="text-center text-muted">SOS на карте</p>
+        </div>
+    </div>
+    
+    <!-- За последние 24 часа -->
+    <div class="col-lg-4 col-md-6">
+        <div class="stat-card">
+            <h3>🕐 За 24 часа</h3>
+            <div class="big-number">{{ last_24h_sos|default:0 }}</div>
+            <p class="text-center text-muted">новых SOS</p>
+        </div>
+    </div>
+    
+    <!-- Обработанные SOS -->
+    <div class="col-lg-4 col-md-6">
+        <div class="stat-card">
+            <h3>✅ Обработанные</h3>
+            <div class="big-number">{{ processed_sos|default:0 }}</div>
+            <p class="text-center text-muted">SOS</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 3D круговая диаграмма -->
+    <div class="col-lg-8 col-md-6">
+        <div class="stat-card">
+            <h3>🎯 Распределение по статусам</h3>
+            <div class="container-3d" id="3d-pie-chart">
+                <div class="loading">Загрузка 3D модели...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Детальная статистика -->
+    <div class="col-lg-4 col-md-6">
+        <div class="stat-card">
+            <h3>📋 Детальная статистика</h3>
+            <div class="category-stats">
+                <div class="category-item">
+                    <h4>🚨 Активные</h4>
+                    <p id="active-count">0</p>
+                </div>
+                <div class="category-item">
+                    <h4>✅ Решены</h4>
+                    <p id="processed-count">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- OpenStreetMap с точками SOS -->
+    <div class="col-lg-6 col-md-6">
+        <div class="stat-card">
+            <h3>🗺️ География SOS</h3>
+            <div id="openstreetmap" style="height: 400px; width: 100%; border-radius: 10px; overflow: hidden;">
+                <div class="loading" style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f8f9fa;">
+                    Загрузка карты...
+                </div>
+            </div>
+            <!-- Легенда для карты -->
+            <div class="mt-3">
+                <div class="d-flex justify-content-center flex-wrap">
+                    <div class="mx-2 mb-1">
+                        <span style="display: inline-block; width: 12px; height: 12px; background-color: #ff4444; border-radius: 50%; margin-right: 5px;"></span>
+                        <small>Активные SOS</small>
+                    </div>
+                    <div class="mx-2 mb-1">
+                        <span style="display: inline-block; width: 12px; height: 12px; background-color: #44ff44; border-radius: 50%; margin-right: 5px;"></span>
+                        <small>Решены</small>
+                    </div>
+                </div>
+                <small class="text-muted d-block text-center mt-2">Кликните на маркер для просмотра деталей</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- График трендов -->
+    <div class="col-lg-6 col-md-6">
+        <div class="stat-card">
+            <h3>📈 Тренды SOS</h3>
+            <div class="chart-container">
+                <canvas id="trend-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Навигация -->
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{% url 'web:reports_period' 'day'  %}" class="btn btn-outline-primary" style="margin: 0 10px;">
+        📊 Статистика жалоб
+    </a>
+    <a href="{% url 'web:sos_stats' 'day' %}" class="btn btn-outline-danger" style="margin: 0 10px;">
+        🚨 SOS Сообщения
+    </a>
+</div>
+
+<script>
+// Получаем данные из Django
+const activeCount = parseInt('{{ active_sos|default:0 }}');
+const pendingCount = parseInt('{{ pending_sos|default:0 }}');
+const processedCount = parseInt('{{ processed_sos|default:0 }}');
+const totalCount = parseInt('{{ total_sos|default:0 }}');
+
+// Обновляем счетчики
+document.getElementById('active-count').textContent = activeCount;
+document.getElementById('processed-count').textContent = processedCount;
+
+// 3D круговая диаграмма для SOS
+function create3DSOSPieChart() {
+    const container = document.getElementById('3d-pie-chart');
+    container.innerHTML = '';
+    
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+    
+    // Создаем 3D сегменты для SOS
+    const segments = [
+        { count: activeCount, color: 0xff4444, label: 'Активные' },
+        { count: processedCount, color: 0x44ff44, label: 'Решены' }
+    ];
+    
+    const group = new THREE.Group();
+    let angle = 0;
+    
+    segments.forEach((segment, index) => {
+        if (segment.count > 0) {
+            const geometry = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32);
+            const material = new THREE.MeshPhongMaterial({ color: segment.color });
+            const cylinder = new THREE.Mesh(geometry, material);
+            
+            const segmentAngle = (segment.count / totalCount) * Math.PI * 2;
+            cylinder.rotation.z = angle;
+            cylinder.position.x = Math.cos(angle + segmentAngle/2) * 0.3;
+            cylinder.position.y = Math.sin(angle + segmentAngle/2) * 0.3;
+            
+            group.add(cylinder);
+            angle += segmentAngle;
+        }
+    });
+    
+    scene.add(group);
+    
+    // Освещение
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5);
+    scene.add(light);
+    
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambientLight);
+    
+    camera.position.z = 2.5;
+    
+    // Контроллер для вращения
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        group.rotation.y += 0.005;
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+}
+
+// OpenStreetMap с точками SOS
+let map;
+let markers = [];
+
+function initSOSOpenStreetMap() {
+    // Получаем координаты SOS из Django
+    const sosCoords = JSON.parse('{{ sos_coords|escapejs }}');
+    
+    // Центр карты на Казахстане
+    const kazakhstanCenter = [48.0196, 66.9237];
+    
+    // Инициализация карты
+    map = L.map('openstreetmap').setView(kazakhstanCenter, 5);
+    
+    // Добавляем слой OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+    
+    // Скрываем индикатор загрузки
+    const loadingDiv = document.querySelector('#openstreetmap .loading');
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+    }
+    
+    // Цвета маркеров по статусам SOS
+    const markerColors = {
+        'ACTIVE': 'red',
+        'PROCESSED': 'green'
+    };
+    
+    // Добавляем маркеры для каждого SOS
+    sosCoords.forEach((sos, index) => {
+        const marker = L.circleMarker([sos.lat, sos.lon], {
+            radius: 10,
+            fillColor: markerColors[sos.status] || 'red',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(map);
+        
+        // Создаем всплывающее окно
+        const popupContent = createSOSPopupContent(sos);
+        marker.bindPopup(popupContent, {
+            maxWidth: 300,
+            className: 'custom-popup'
+        });
+        
+        // Добавляем обработчик клика на маркер
+        marker.on('click', function(e) {
+            this.openPopup();
+        });
+        
+        markers.push(marker);
+    });
+    
+    // Автоматически подгоняем масштаб под все маркеры
+    if (markers.length > 0) {
+        const group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Функция для создания содержимого всплывающего окна SOS
+function createSOSPopupContent(sos) {
+    const statusText = sos.status === 'PROCESSED' ? '✅ Решен' : '🚨 Активен';
+    const statusColor = sos.status === 'PROCESSED' ? '#28a745' : '#dc3545';
+    
+    return `
+        <div style="max-width: 300px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <div style="border-bottom: 2px solid #ff6b6b; padding-bottom: 10px; margin-bottom: 15px;">
+                <h4 style="margin: 0; color: #ff6b6b; font-size: 1.2rem;">🚨 SOS</h4>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <strong>👤 Имя:</strong> ${sos.name}
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <strong>🆔 ИИН:</strong> ${sos.iin}
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <strong>📱 Telegram:</strong> ${sos.tg_id || 'Не указан'}
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <strong>📍 Координаты:</strong><br>
+                <div style="
+                    background: #f8f9fa; 
+                    padding: 10px; 
+                    border-radius: 5px; 
+                    margin-top: 5px; 
+                    border-left: 3px solid #ff6b6b;
+                    font-size: 0.9rem;
+                    line-height: 1.4;
+                ">${sos.lat}, ${sos.lon}</div>
+            </div>
+            
+            <div style="text-align: center;">
+                <span style="
+                    padding: 5px 15px; 
+                    border-radius: 20px; 
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    background: ${statusColor};
+                    color: white;
+                ">${statusText}</span>
+            </div>
+        </div>
+    `;
+}
+
+// График трендов для SOS
+function createSOSTrendChart() {
+    const ctx = document.getElementById('trend-chart').getContext('2d');
+    
+    // Очищаем предыдущий график
+    if (window.sosTrendChart) {
+        window.sosTrendChart.destroy();
+    }
+    
+    // Данные для SOS трендов
+    const labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'];
+    const data = [totalCount * 0.1, totalCount * 0.05, totalCount * 0.3, totalCount * 0.8, totalCount * 1.2, totalCount * 0.9, totalCount * 0.4];
+    
+    window.sosTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'SOS сообщения',
+                data: data,
+                borderColor: '#ff6b6b',
+                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#ff6b6b',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Инициализация всех графиков
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        create3DSOSPieChart();
+        initSOSOpenStreetMap();
+        createSOSTrendChart();
+    }, 500);
+});
+
+// Обработка изменения размера окна
+window.addEventListener('resize', function() {
+    setTimeout(() => {
+        create3DSOSPieChart();
+    }, 100);
+});
+</script>
+{% endblock content %}

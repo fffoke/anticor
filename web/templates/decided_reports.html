@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Все жалобы{% endblock title %}
+
+{% block content %}
+
+
+<style>
+  .stats-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .stats-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+</style>
+  <div class="stats-header">
+    <h1>✅ Решенные жалобы</h1>
+    <p class="mb-0">Обработанные жалобы граждан</p>
+  </div>
+</div>
+<br>
+  {% if reports %}
+  <div class="accordion" id="reportsAccordion">
+    {% for report in reports %}
+      <div class="accordion-item mb-2 shadow-sm border-0">
+        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}">
+            <strong>{{ report.title }}</strong>
+            <span class="ms-2">
+              {% if report.category == "CRITICAL" %}
+                <span class="badge bg-danger">Важная</span>
+              {% elif report.category == "SECONDARY" %}
+                <span class="badge bg-warning text-dark">Обычная</span>
+              {% else %}
+                <span class="badge bg-secondary">Спам</span>
+              {% endif %}
+            </span>
+          </button>
+        </h2>
+
+        <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#reportsAccordion">
+          <div class="accordion-body">
+            {% if report.image %}
+              <img src="{{ report.image.url }}" class="img-fluid rounded mb-3" alt="{{ report.title }}">
+            {% endif %}
+
+            <p><strong>Описание:</strong> {{ report.text }}</p>
+
+            {% if report.latitude and report.longitude %}
+              <a href="https://2gis.kz/geo/{{ report.latitude }},{{ report.longitude }}" target="_blank" class="btn btn-primary btn-sm">
+                📍 Открыть в 2ГИС
+              </a>
+              <br>
+            {% else %}
+              <button class="btn btn-secondary btn-sm" disabled>Местоположение не указано</button>
+            {% endif %}
+              <br>
+              <span class="badge bg-success">✅ Решено</span>
+            <p class="text-muted small mt-3 mb-0">
+              Создано: {{ report.created_at|date:"d.m.Y H:i" }} | 
+              Решено: {{ report.decided_at|date:"d.m.Y H:i" }}
+            </p>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="text-center text-muted">Пока нет жалоб</p>
+  {% endif %}
+    <!-- Навигация -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'web:decided_sos' %}" class="btn btn-outline-danger" style="margin: 0 10px;">
+            🚨 Решенные SOS
+        </a>
+        <a href="{% url 'web:decided_reports'  %}" class="btn btn-outline-info" style="margin: 0 10px;">
+            📊 Решенные жалобы
+        </a>
+    </div>
+{% endblock content %}

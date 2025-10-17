@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}SOS Сообщения{% endblock title %}
+
+{% block content %}
+<style>
+    .sos-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .sos-header {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .sos-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .sos-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-left: 5px solid #ff6b6b;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .sos-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+    
+    .sos-card.urgent {
+        border-left-color: #ff4757;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+    }
+    
+    .sos-card.resolved {
+        border-left-color: #4caf50;
+        background: linear-gradient(135deg, #f5fff5 0%, #e8f5e8 100%);
+    }
+    
+    .sos-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-radius: 8px;
+        border-left: 3px solid #ff6b6b;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .info-value {
+        font-size: 1.1rem;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    .location-info {
+        background: #e3f2fd;
+        border-left-color: #2196f3;
+        margin-top: 1rem;
+    }
+    
+    .sos-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        justify-content: flex-end;
+    }
+    
+    .btn-sos {
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-respond {
+        background: #4caf50;
+        color: white;
+    }
+    
+    .btn-respond:hover {
+        background: #45a049;
+        transform: translateY(-2px);
+    }
+    
+    .btn-details {
+        background: #2196f3;
+        color: white;
+    }
+    
+    .btn-details:hover {
+        background: #1976d2;
+        transform: translateY(-2px);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ff6b6b;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .sos-status {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-active {
+        background: #ff4757;
+        color: white;
+    }
+    
+    .status-resolved {
+        background: #4caf50;
+        color: white;
+    }
+</style>
+
+<div class="sos-container">
+    <div class="sos-header">
+        <h1>🚨 SOS Сообщения</h1>
+        <p class="mb-0">Экстренные обращения граждан</p>
+    </div>
+    
+   
+    
+    
+    <!-- Список SOS сообщений -->
+    {% if sos_messages %}
+        {% for sos in sos_messages %}
+        {% if not sos.is_decided %}
+        <div class="sos-card {% if sos.is_decided %}resolved{% else %}urgent{% endif %}">
+            <div class="sos-info">
+                <div class="info-item">
+                    <div class="info-label">👤 Имя</div>
+                    <div class="info-value">{{ sos.name }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">🆔 ИИН</div>
+                    <div class="info-value">{{ sos.iin }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">📱 Telegram ID</div>
+                    <div class="info-value">{{ sos.tg_id|default:"Не указан" }}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">📊 Статус</div>
+                    <div class="info-value">
+                        <span class="sos-status {% if sos.is_decided %}status-resolved{% else %}status-active{% endif %}">
+                            {% if sos.is_decided %}✅ Решен{% else %}🚨 Активен{% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if sos.latitude and sos.longitude %}
+                <div class="info-item location-info">
+                    <div class="info-label">📍 Координаты</div>
+                    <div class="info-value">{{ sos.latitude }}, {{ sos.longitude }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="sos-actions">
+                {% if not sos.is_decided %}
+                    <a href="{% url 'web:sos_decided' sos.id %}" class="btn-sos btn-respond">✅ Решить</a>
+                {% else %}
+                    <span class="btn-sos btn-respond" style="background: #4caf50; cursor: default;">✅ Решен</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i>🚨</i>
+            <h3>Нет активных SOS сообщений</h3>
+            <p>Все обращения обработаны</p>
+        </div>
+    {% endif %}
+    
+    
+</div>
+{% endblock content %}
