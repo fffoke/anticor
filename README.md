@@ -44,6 +44,7 @@ pip install -r requirements.txt
 ```env
 BOT_TOKEN=your_telegram_bot_token
 OPEN_AI=your_openai_api_key
+TG_ADMIN=tg_id for adming
 ```
 
 ### 3. Настройка базы данных
