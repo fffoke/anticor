@@ -1,3 +1,4 @@
 .env
 bot_db.sqlite3
 db.sqlite3
+medis/images
