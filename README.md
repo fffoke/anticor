@@ -31,6 +31,7 @@
 - Python 3.8+
 - Telegram Bot Token
 - OpenAI API Key (OpenRouter)
+- Также создание папки media
 
 ### 1. Клонирование и установка зависимостей
 ```bash
