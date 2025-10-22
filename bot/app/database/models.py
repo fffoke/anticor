@@ -31,7 +31,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)   
     tg_id = mapped_column(BigInteger)
     name: Mapped[str] = mapped_column(String(50))
-    iin: Mapped[int] = mapped_column()
+    iin: Mapped[str] = mapped_column(String(12))
 
 
 class Tip(Base):

@@ -26,8 +26,9 @@ router = Router()
 
 @router.callback_query(F.data == 'my_profile')
 async def my_profile(callback: CallbackQuery):
-    tg_id = callback.message.from_user.id
-    user = await get_user(tg_id=tg_id)
+    tg_id = callback.from_user.id
+    print(callback.from_user.id)
+    user = await get_user(tg_id)
     if user:
         text = (
             f"🪪 <b>Ваш профиль</b>\n\n"
@@ -60,7 +61,7 @@ async def verify(callback: CallbackQuery, state: FSMContext):
 
 @router.message(Verify.iin)
 async def get_iin(message: Message, state: FSMContext):
-    iin = message.text.strip()
+    iin = message.text
 
     if not iin.isdigit():
         await message.answer("Введите валидный ИИН!", reply_markup=kb.verify)

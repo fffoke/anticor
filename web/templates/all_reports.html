@@ -80,15 +80,13 @@
         <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#reportsAccordion">
           <div class="accordion-body">
             {% if report.image %}
-              <img src="{{ report.image.url }}" class="img-fluid rounded mb-3" alt="{{ report.title }}">
+              <img src="{{ report.image.url }}" width="200px"  class="img-fluid rounded mb-3" alt="{{ report.title }}">
             {% endif %}
 
             <p><strong>Описание:</strong> {{ report.text }}</p>
 
             {% if report.latitude and report.longitude %}
-              <a href="https://2gis.kz/geo/{{ report.latitude }},{{ report.longitude }}" target="_blank" class="btn btn-primary btn-sm">
-                📍 Открыть в 2ГИС
-              </a>
+              <a href="https://www.google.com/maps?q={{ report.latitude }},{{ report.longitude }}"target="_blank" class="btn btn-primary btn-sm">Открыть на карте</a>
               <br>
             {% else %}
               <button class="btn btn-secondary btn-sm" disabled>Местоположение не указано</button>

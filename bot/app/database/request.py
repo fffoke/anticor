@@ -8,11 +8,14 @@ from bot.config import TG_ADMIN
 # Создание нового юзера
 async def create_user(tg_id, name, iin):
     async with async_session() as s:
-        user = await s.scalar(select(User).where(tg_id == tg_id))
+        user = await s.scalar(select(User).where(User.tg_id == tg_id))
         if not user:
-            s.add(User(tg_id=tg_id, name=name, iin=iin))
+            new_user = User(tg_id=tg_id, name=name, iin=iin)
+            s.add(new_user)
+            await s.flush()  # <-- гарантирует запись в БД до коммита
             await s.commit()
-            return user
+            await s.refresh(new_user)
+        return user
 
 
 
@@ -20,7 +23,9 @@ async def create_user(tg_id, name, iin):
 # достать юзера
 async def get_user(tg_id):
     async with async_session() as s:
-        user = await s.scalar(select(User).where(tg_id == tg_id))
+        user = await s.scalar(select(User).where(User.tg_id == tg_id))
+        print("Searching user by:", tg_id)
+        print("Found:", user)
         if user:
             return user
         else:
@@ -29,7 +34,7 @@ async def get_user(tg_id):
 # Проверка зареган юзер или нет
 async def check_user(tg_id):
     async with async_session() as s:
-        user = await s.scalar(select(User).where(tg_id == tg_id))
+        user = await s.scalar(select(User).where(User.tg_id == tg_id))
         if user:
             return True
         else:
@@ -42,7 +47,7 @@ async def check_user(tg_id):
 #  проверка админ ли юзер
 async def is_admin(tg_id):
     async with async_session() as s:
-        admin = await s.scalar(select(Admin).where(tg_id==tg_id))
+        admin = await s.scalar(select(Admin).where(Admin.tg_id==tg_id))
 
         if admin:
             return True
@@ -60,7 +65,7 @@ async def add_admin():
 # добовляем оператора
 async def add_oper_req(tg_id):
     async with async_session() as s:    
-        oper = await s.scalar(select(Oper).where(tg_id == tg_id))
+        oper = await s.scalar(select(Oper).where(Oper.tg_id == tg_id))
 
         if not oper:
             s.add(Oper(tg_id=tg_id))

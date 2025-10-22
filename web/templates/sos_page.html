@@ -224,7 +224,7 @@
                 {% if sos.latitude and sos.longitude %}
                 <div class="info-item location-info">
                     <div class="info-label">📍 Координаты</div>
-                    <div class="info-value">{{ sos.latitude }}, {{ sos.longitude }}</div>
+                    <div class="info-value"><a href="https://www.google.com/maps?q={{sos.latitude}},{{sos.longitude}}"target="_blank">Открыть на карте</a></div>
                 </div>
                 {% endif %}
             </div>

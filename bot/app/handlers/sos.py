@@ -25,12 +25,13 @@ router = Router()
 
 @router.callback_query(F.data=='sos')
 async def create_sos(callback: CallbackQuery):
-    user = await get_user(callback.message.from_user.id)
+    print(callback.from_user.id)
+    user = await get_user(callback.from_user.id)
     if user:
-        await callback.message.answer(text='Отправить сигнал SOS', reply_markup=kb.sos)
+        return await callback.message.answer(text='Отправить сигнал SOS', reply_markup=kb.sos)
     else:
-        await callback.message.edit_text(text='У вас не верифецированный аккаунт', reply_markup= kb.main)
-        return
+        return await callback.message.edit_text(text='У вас не верифецированный аккаунт', reply_markup= kb.main)
+        
 @router.message(lambda msg: msg.location)
 async def sos(message: Message):
     tg_id = message.from_user.id
@@ -43,6 +44,7 @@ async def sos(message: Message):
             longitude=message.location.longitude,
             tg_id = tg_id
         )
+        await message.answer(text='Sos успешно отправлен', reply_markup= kb.main)
         opers = await get_opers()
         for oper in opers:
             await bot.send_message(chat_id=int(oper.tg_id), 
@@ -60,6 +62,7 @@ async def sos(message: Message):
 ⚠️ <b>Необходима немедленная проверка!</b>  
 Пожалуйста, свяжитесь с пользователем и передайте информацию соответствующим службам.
 ''', parse_mode='HTML', disable_web_page_preview=True)
+            return 
     else:
         await message.edit_text(text='У вас не верифецированный аккаунт', reply_markup= kb.main)
         return
